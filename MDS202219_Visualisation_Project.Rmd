@@ -1,0 +1,157 @@
+---
+title: "Visualisation Project"
+author: "Mohit Kumar Jain MDS202219"
+date: "2022-11-02"
+output:
+  word_document: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+Link to the dashboard: https://mohitsm18.shinyapps.io/Visualisation_Project/
+
+Link to the video:
+https://youtu.be/Q6hw5R9I7KU
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+DATA DESCRIPTION:
+The data set contains the following information about matches played in the IPL from 2008 to 2019 except those abandoned without a ball being bowled:
+Teams involved
+Venue and City
+Toss and Result
+Winner and Win margin
+Officials involved
+Player of the match
+
+
+
+```{r echo=FALSE, message=TRUE}
+setwd('C:\\Users\\HP\\Downloads\\archive')
+library(ggplot2)
+data=read.csv('Matches_Data.csv')
+```
+
+number of matches played in the IPL from 2008 to 2019 except those abandoned without a ball being bowled
+
+```{r echo=FALSE, message=TRUE}
+nrow(data)
+```
+
+how the data looks like:
+```{r echo=FALSE, message=TRUE}
+head(data)
+```
+
+```{r echo=FALSE, message=TRUE}
+venue=data.frame(table(unlist(data['city'])))
+colnames(venue)[1]='Venues'
+venue['Country']=c('UAE','India','India','South Africa','South Africa','South Africa','India','India','India','India','India','UAE','South Africa','South Africa','India','India','India','South Africa','India','South Africa','India','India','India','India','India','South Africa','India','India','India','India','UAE','India')
+ggplot(venue,aes(x=Country,y=Freq,fill=Venues)) +
+  geom_col()+
+  labs(x="Country",y="No. of matches",title='Venues grouped by country')
+```
+Above is a visual representation of the different venues and the amount of cricket played
+
+
+```{r echo=FALSE, message=TRUE}
+matches_played=data.frame(table(data['season']))
+total_matches=matches_played
+total_matches['Freq']=c(59,59,60,74,74,76,60,60,60,60,60,60)
+abandoned_matches=data.frame(total_matches['season'],total_matches['Freq']-matches_played['Freq'])
+matches=data.frame(total_matches['season'],total_matches['Freq'],matches_played['Freq'],abandoned_matches['Freq'])
+colnames(matches)=c('season','total','played','abandoned')
+ggplot(matches,aes(x=season,y=total,fill=abandoned)) +
+  geom_col()+
+  labs(x="Season",y="No. of matches",title="Matches played")+
+  geom_text(aes(label=played),vjust=-0.3,size=3)+
+  ggtitle('Matches played/abandoned by season')
+```
+The visual shows the no. of matches played or completely abandoned per season
+
+
+```{r echo=FALSE, message=TRUE}
+team_matches=data.frame(table(unlist(append(data['team1'],data['team2']))))
+colnames(team_matches)=c('team','played')
+team_matches['won']=data.frame(table(unlist(data['winner'])))['Freq'][2:15,]
+team_code=c('CSK','DCH','DC','DD','GL','KXIP','KTK','KKR','MI','PW','RR','RPS','RCB','SRH')
+team_matches['code']=team_code
+team_matches['win%']=team_matches['won']/team_matches['played']
+team_matches_reshaped=data.frame(x=team_matches$code,y=c(team_matches$won,team_matches$played-team_matches$won),group=c(rep('won',nrow(team_matches)),rep('lost',nrow(team_matches))),`win%`=team_matches$`win%`)
+ggplot(team_matches_reshaped,aes(x=x,y=y,fill=group))+
+  geom_col()+
+  ggtitle('Proportion of matches won/lost by each team')
+```
+The visual clearly shows how CSK and MI have been consistent and successful over the years, DC too has a high proportion of success but over a very small sample size. The now defunct teams mostly had a poor record which contributed to the downfall of franchise. Some other teams like KKR, SRH and RR have always been mid-table with occasional titles which is reflected here. And then teams like KXIP and RCB are not too behind either but haven't been able to cross the final hurdle.
+
+
+```{r echo=FALSE, message=TRUE}
+df=data.frame(table(unlist(append(data['umpire1'],data['umpire2']))))
+df=df[order(df$Freq,decreasing=TRUE),]
+umpires=data.frame('name'=df$Var1,'matches'=df$Freq)[1:20,]
+ggplot(umpires,aes(x=name,y=matches,fill=name))+
+  geom_col()+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  ggtitle('Umpires who have officiated the most')
+```
+Majority of the umpires are elite panel umpires or have been elite panel umpires at their time. This is important as the level of umpiring goes a long way in contributing to the league's success.
+
+
+```{r echo=FALSE, message=TRUE}
+x=list(data['win_by_runs'])
+run_victory=data.frame(table(factor(cut(unlist(x), breaks=seq(0,150,10)))))
+ggplot(run_victory,aes(x=Var1,y=Freq,fill=Freq))+
+  geom_col()+
+  labs(x='Run margin',y='No. of occurences')+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+  geom_text(aes(label=Freq),vjust=-0.3,size=3)+
+  ggtitle('Victories batting first')
+```
+Almost 50% of the victories batting first have been under 20 runs which shows the league's cut throat competition.
+
+
+```{r echo=FALSE, message=TRUE}
+wicket_victory=data.frame(table(unlist(data['win_by_wickets'])))[2:11,]
+ggplot(wicket_victory,aes(x=Var1,y=Freq,fill=Freq))+
+  geom_col()+
+  labs(x='Wicket margin',y='No. of occurences')+
+  geom_text(aes(label=Freq),vjust=-0.3,size=3)+
+  ggtitle('Victories batting second')
+```
+To the eye, it appears almost normally distributed which is manifested in the fact that good run chases are usually completed with 5-6 wickets remaining. However, fiery bowling performances usually leave the opponent reeling despite not winning and vice-versa for cold bowling performances.
+
+
+No. of non-decisive games in regulation time
+```{r echo=FALSE, message=TRUE}
+nrow(data)-sum(run_victory$Freq)-sum(wicket_victory$Freq)
+```
+
+No. of tied matches
+```{r echo=FALSE, message=TRUE}
+length(data['season'] [data['result']=='tie'])
+```
+
+
+CONCLUSION:
+IPL is indeed the most competitive league in the world with all its popularity and diversity. But it is also a launchpad for the youngsters no less.
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
